@@ -16,8 +16,8 @@
  *   OWNER_NUMBER      = ex: 22890000000 (ton numéro, sans le +)
  *   BOT_NUMBER        = ex: 22890000001 (numéro utilisé pour le pairing code)
  *   PREFIX            = ! (optionnel, défaut "!")
- *   OPENAI_API_KEY    = (optionnel, active !ia avec une vraie IA)
- *   OPENAI_MODEL      = gpt-4o-mini (optionnel)
+ *   GEMINI_API_KEY    = (optionnel, active !ia avec Gemini — clé depuis aistudio.google.com)
+ *   GEMINI_MODEL      = gemini-2.0-flash (optionnel)
  *
  * DÉMARRAGE :
  *   node index.js
@@ -114,20 +114,24 @@ async function getWeather(city) {
 }
 
 async function askOpenAI(prompt) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return "⚠️ !ia n'est pas configuré. Ajoute la variable d'environnement OPENAI_API_KEY pour l'activer.";
-  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 500,
-    }),
-  });
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return "⚠️ !ia n'est pas configuré. Ajoute la variable d'environnement GEMINI_API_KEY pour l'activer.";
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    }
+  );
   const json = await res.json();
-  return json?.choices?.[0]?.message?.content?.trim() || "Je n'ai pas pu générer de réponse.";
+  return (
+    json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+    "Je n'ai pas pu générer de réponse."
+  );
 }
 
 function simpleSummary(text, maxSentences = 3) {
